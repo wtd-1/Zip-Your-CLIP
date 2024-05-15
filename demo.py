@@ -10,13 +10,17 @@ from skimage import measure
 import matplotlib.pyplot as plt
 from collections import Counter
 import torch.nn.functional as F
-#from zip_utils import *
+import argparse
+import clip  # Ensure you have the clip module imported
+from torchvision import transforms  # Import torchvision.transforms
 
-def semantic_analysis():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
-    #model, _ = clip.load("CS-ViT-B/16")
-    model.eval().cuda()
-    img_path = "__assets__/example1.png"
+# Define the transformation
+H2_ToTensor = transforms.ToTensor()
+L_ToTensor = transforms.ToTensor()
+
+def semantic_analysis(img_path, model):  # Update to take model as an argument
+    #os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+    model.eval().cuda()  # Use the model passed as an argument
     I = Image.open(img_path).convert('RGB')
 
     image = cv2.imread(img_path)
@@ -73,10 +77,8 @@ def semantic_analysis():
     return similarity_map0, image, I
 
 def load_model():
-    #model_, _ = clip.load("RN50x64")
-    model_ = list(model_.visual.children())
-    l_backbone = nn.Sequential(*(model_[:-2])).float()
-    return l_backbone
+    model, _ = clip.load("ViT-B/16")  # Ensure the model is loaded here
+    return model
 
 def clustering(I, l_backbone):
     with torch.no_grad():
@@ -183,9 +185,16 @@ def inference_on_one_image(model, l_backbone, img_path, texts):
         plt.savefig('inference_output.png')
         plt.close()
 
-#if __name__ == "__main__":
-    #similarity_map0, image, I = semantic_analysis()
-    #l_backbone = load_model()
-    #cluster_labels = clustering(I, l_backbone)
-    #combine(similarity_map0, cluster_labels, I, image)
-    #inference_on_one_image(model, l_backbone, "__assets__/example1.png", ['orange'])
+# Create a main block that uses the functions defined above and the argparser
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Run semantic analysis on an image.')
+    parser.add_argument('img_path', type=str, help='Path to the input image')
+    args = parser.parse_args()
+    print('image path ', args.img_path)
+
+    model = load_model()  # Load the model here
+    similarity_map0, image, I = semantic_analysis(args.img_path, model)  # Pass the model to semantic_analysis
+    l_backbone = load_model()
+    cluster_labels = clustering(I, l_backbone)
+    combine(similarity_map0, cluster_labels, I, image)
+    inference_on_one_image(model, l_backbone, args.img_path, ['orange'])
